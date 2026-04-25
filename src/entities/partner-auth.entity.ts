@@ -1,4 +1,4 @@
-import { BaseEntity, Entity, PrimaryGeneratedColumn, Column, CreateDateColumn, UpdateDateColumn, OneToOne, JoinColumn, BeforeInsert } from 'typeorm';
+import { BaseEntity, Entity, PrimaryGeneratedColumn, Column, CreateDateColumn, UpdateDateColumn, OneToOne, JoinColumn, BeforeInsert, BeforeUpdate } from 'typeorm';
 import { Partner } from './partner.entity.js';
 import * as bcrypt from 'bcrypt';
 
@@ -27,8 +27,9 @@ export class PartnerAuth extends BaseEntity {
   modifiedAt: Date;
 
   @BeforeInsert()
+  @BeforeUpdate()
   async hashPassword() {
-    if (this.passwordHash) {
+    if (this.passwordHash && !this.passwordHash.startsWith('$2b$')) {
       this.passwordHash = await bcrypt.hash(this.passwordHash, 10);
     }
   }

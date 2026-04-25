@@ -25,6 +25,7 @@ import { Notification } from './entities/notification.entity.js';
 import { DeviceToken } from './entities/device-token.entity.js';
 import { Setting } from './entities/setting.entity.js';
 import { PartnerResourceOptions } from './admin/resources/partner.resource.js';
+import { PartnerApplication } from './entities/partner-application.entity.js';
 import { UserController } from './user.controller.js';
 
 AdminJS.registerAdapter({
@@ -58,6 +59,29 @@ export const adminJsOptions = {
     { resource: PartnerContact, options: { navigation: false } },
     { resource: PartnerProduct, options: { navigation: false } },
     { resource: PartnerService, options: { navigation: false } },
+    {
+      resource: PartnerApplication,
+      options: {
+        navigation: { name: 'Partners', icon: 'Send' },
+        sort: { sortBy: 'createdAt', direction: 'desc' },
+        properties: {
+          id: { isVisible: { list: false, filter: false, show: true, edit: false } },
+          about: { type: 'textarea' },
+          status: {
+            availableValues: [
+              { value: 'pending', label: '⏳ Pending' },
+              { value: 'approved', label: '✅ Approved' },
+              { value: 'rejected', label: '❌ Rejected' },
+            ],
+          },
+          createdAt: { isVisible: { list: true, filter: true, show: true, edit: false } },
+        },
+        actions: {
+          new: { isAccessible: false },
+          delete: { isAccessible: true },
+        },
+      },
+    },
     { 
       resource: Admin, 
       options: { 
@@ -206,7 +230,8 @@ export const adminJsOptions = {
         ServiceRecord,
         Notification,
         DeviceToken,
-        Setting
+        Setting,
+        PartnerApplication
       ],  synchronize: false,
         logging: false,
       }),
