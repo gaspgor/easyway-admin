@@ -1,12 +1,13 @@
 import { Module } from '@nestjs/common';
 import { ConfigModule } from '@nestjs/config';
 import { TypeOrmModule } from '@nestjs/typeorm';
-import AdminJS, { ComponentLoader } from 'adminjs';
+import AdminJS from 'adminjs';
 import AdminJSExpress from '@adminjs/express';
 import * as AdminJSTypeorm from '@adminjs/typeorm';
 import * as path from 'path';
 import { fileURLToPath } from 'url';
 import { MoreThanOrEqual } from 'typeorm';
+import { componentLoader, dashboardComponent, blankDashboardComponent } from './component-loader.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -25,7 +26,13 @@ import { Notification } from './entities/notification.entity.js';
 import { DeviceToken } from './entities/device-token.entity.js';
 import { Setting } from './entities/setting.entity.js';
 import { PartnerResourceOptions } from './admin/resources/partner.resource.js';
+import { PartnerServiceResourceOptions } from './admin/resources/partner-service.resource.js';
+import { PartnerProductResourceOptions } from './admin/resources/partner-product.resource.js';
 import { PartnerApplication } from './entities/partner-application.entity.js';
+import { MaintenancePrediction } from './entities/maintenance-prediction.entity.js';
+import { PartnerSlot } from './entities/partner-slot.entity.js';
+import { ServiceCenter } from './entities/service-center.entity.js';
+import { PartnerLocation } from './entities/partner-location.entity.js';
 import { UserController } from './user.controller.js';
 
 AdminJS.registerAdapter({
@@ -33,8 +40,8 @@ AdminJS.registerAdapter({
   Database: AdminJSTypeorm.Database,
 });
 
-const componentLoader = new ComponentLoader();
-const dashboardComponent = componentLoader.add('Dashboard', path.join(__dirname, 'admin/components/dashboard'));
+
+
 
 export const adminJsOptions = {
   rootPath: '/admin',
@@ -57,8 +64,32 @@ export const adminJsOptions = {
     PartnerResourceOptions,
     { resource: PartnerAuth, options: { navigation: false } },
     { resource: PartnerContact, options: { navigation: false } },
-    { resource: PartnerProduct, options: { navigation: false } },
-    { resource: PartnerService, options: { navigation: false } },
+    { resource: ServiceCenter, options: { navigation: false } }, // Hidden — needed for TypeORM relation resolution
+    PartnerServiceResourceOptions,
+    PartnerProductResourceOptions,
+    {
+      resource: PartnerLocation,
+      options: {
+        navigation: { name: 'Partners', icon: 'MapPin' },
+        titleProperty: 'address',  // Show address in reference dropdowns
+        sort: { sortBy: 'createdAt', direction: 'desc' },
+        listProperties: ['partnerId', 'address', 'type', 'lat', 'lng', 'createdAt'],
+        showProperties: ['id', 'partnerId', 'address', 'lat', 'lng', 'type', 'createdAt', 'updatedAt'],
+        editProperties: ['partnerId', 'address', 'lat', 'lng', 'type'],
+        filterProperties: ['partnerId', 'type'],
+        properties: {
+          type: {
+            availableValues: [
+              { value: 'main', label: '🏢 Main Branch' },
+              { value: 'branch', label: '🏪 Branch' },
+            ],
+          },
+          id: { isVisible: { list: false, filter: false, show: true, edit: false } },
+          createdAt: { isVisible: { list: true, filter: true, show: true, edit: false } },
+          updatedAt: { isVisible: { list: false, filter: false, show: true, edit: false } },
+        },
+      },
+    },
     {
       resource: PartnerApplication,
       options: {
@@ -102,6 +133,24 @@ export const adminJsOptions = {
         }
       } 
     },
+    {
+      resource: MaintenancePrediction,
+      options: {
+        navigation: { name: 'Users', icon: 'Tool' },
+        sort: { sortBy: 'predictedDate', direction: 'asc' },
+        properties: {
+          partsNeeded: { type: 'json' },
+          servicesNeeded: { type: 'json' },
+        }
+      }
+    },
+    {
+      resource: PartnerSlot,
+      options: {
+        navigation: { name: 'Partners', icon: 'Calendar' },
+        sort: { sortBy: 'startTime', direction: 'desc' },
+      }
+    },
   ],
   branding: {
     companyName: 'EasyWay Dashboard',
@@ -109,8 +158,13 @@ export const adminJsOptions = {
     logo: '', 
   },
   dashboard: {
-    component: dashboardComponent,
-    handler: async (request, response, context) => {
+    component: blankDashboardComponent,
+  },
+  pages: {
+    'Partners analytics': {
+      component: dashboardComponent,
+      icon: 'Activity',
+      handler: async (request, response, context) => {
         const { period = 'weekly', from, to } = request.query as Record<string, string>;
 
         // ── Determine date range ───────────────────────────────────────────
@@ -171,7 +225,6 @@ export const adminJsOptions = {
 
         // ── Raw partner rows ───────────────────────────────────────────────
         const partnerRows: { day: string; count: string }[] = await Partner
-          .getRepository()
           .createQueryBuilder('p')
           .select(
             bucketFormat === 'month'
@@ -206,6 +259,7 @@ export const adminJsOptions = {
            chartData,
            period,
         };
+      }
     }
   },
   assets: {
@@ -231,7 +285,11 @@ export const adminJsOptions = {
         Notification,
         DeviceToken,
         Setting,
-        PartnerApplication
+        PartnerApplication,
+        MaintenancePrediction,
+        PartnerSlot,
+        ServiceCenter,
+        PartnerLocation
       ],  synchronize: false,
         logging: false,
       }),

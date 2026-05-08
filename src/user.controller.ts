@@ -62,11 +62,11 @@ export class UserController {
 
       const dateFn = bucketFormat === 'month' ? `TO_CHAR(created_at, 'YYYY-MM')` : `TO_CHAR(created_at, 'YYYY-MM-DD')`;
 
-      const userRows: any[] = await User.getRepository().query(
+      const userRows: any[] = await User.query(
         `SELECT ${dateFn} AS day, COUNT(*) AS count FROM users WHERE created_at >= $1 AND created_at <= $2 GROUP BY day ORDER BY day ASC`,
         [startDate, endDate]
       );
-      const partnerRows: any[] = await Partner.getRepository().query(
+      const partnerRows: any[] = await Partner.query(
         `SELECT ${dateFn} AS day, COUNT(*) AS count FROM partners WHERE created_at >= $1 AND created_at <= $2 GROUP BY day ORDER BY day ASC`,
         [startDate, endDate]
       );
